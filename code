@@ -1,0 +1,963 @@
+########################################################################
+#### Education Years on Type 2 Diabetes (T2D) and Education Years on 
+#### T2D risk factors
+
+#### Authors: Charleen D. Adams and Brian B. Boutwell
+#### Roles: 
+
+#### Concept design: BBB and CDA
+#### Programming and statistical analysis: CDA
+#### Figures and tables: CDA
+#### Drafting and revising: CDA and BBB
+#########################################################################
+
+########################################################################
+#### Education Years on Type 2 Diabetes (T2D) 
+########################################################################
+setwd('C:/Users/charl/Dropbox/brian')
+library('data.table')
+library('Cairo')
+library('devtools')
+library('MRInstruments') 
+library('TwoSampleMR')
+library('RadialMR')
+ao <- available_outcomes()
+exposure_dat <- extract_instruments(c('1001'))#Okbay
+exposure_dat <- clump_data(exposure_dat)
+outcome_dat <- extract_outcome_data(exposure_dat$SNP, c('24'), 
+  proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+dat <- harmonise_data(exposure_dat, outcome_dat, action = 2)
+mr_results <- mr(dat)
+mr_results
+
+#####
+#Outlier's check
+raddat <- format_radial(BXG=dat$beta.exposure, BYG=dat$beta.outcome, 
+  seBXG=dat$se.exposure, seBYG=dat$se.outcome, RSID=dat$SNP)
+ivwrad <- ivw_radial(raddat, alpha=0.05, weights=1)
+ivwrad2 <- ivw_radial(raddat, alpha=0.05, weights=1)
+dim(ivwrad$outliers)[1] 
+outliers=ivwrad$outliers[1]
+outliers
+myvars=outliers$SNP
+dat2 <- dat[ ! dat$SNP %in% myvars, ]
+dim(dat2) 
+dim(dat)
+mr_results <- mr(dat2)
+mr_results
+
+#### Note
+#Too conservative with Radial Regression, 
+#since few (17) SNPs and the heterogeneity test
+#indicates no heterogeneity
+
+#change 'dat2' to 'dat' values to avoid messing 
+#with code below which already uses 'dat2'
+#####
+
+dat2=dat
+singlesnp_results=mr_singlesnp(dat2, parameters = default_parameters(),
+  single_method = "mr_wald_ratio", 
+  all_method = c("mr_ivw",
+  "mr_egger_regression", 
+  "mr_weighted_mode",
+   "mr_weighted_median"))
+mr_forest_plot(singlesnp_results, exponentiate = TRUE)#saved as PDF, dimensions 8x5
+mr_scatter_plot(mr_results, dat2)
+write.csv(mr_results,'res.csv')
+write.csv(singlesnp_results,'singlesnps.csv')
+
+#remove snps not used in MR
+singlesnp_results.2=singlesnp_results[1:17,]
+dim(singlesnp_results.2)
+dat2.1=dat2[which(dat2$SNP %in% singlesnp_results.2$SNP),]
+dim(dat2.1)
+dim(dat)
+dat=dat2.1
+write.csv(dat, 'SIMEX.csv')
+
+#r2 and Fstat
+n= 80650
+k=17
+p=dat$eaf.exposure
+r2.1<-(2*(dat2$beta.exposure^2)*p*(1-p))/1
+r2=sum(r2.1)
+r2 
+Fstat <- r2*(n-1-k)/((1-r2)*k)
+Fstat
+
+#Combine results
+sin=singlesnp_results
+res=mr_results
+het<-mr_heterogeneity(dat)
+plt<-mr_pleiotropy_test(dat)
+all_res<-combine_all_mrresults(res,het,plt,sin,ao_slc=T,
+  Exp=T,split.exposure=T,split.outcome=T)
+all_res$lower_intercept=all_res$intercept-1.96*all_res$intercept_se
+all_res$upper_intercept=all_res$intercept+1.96*all_res$intercept_se
+all_res$r2=0.00278791
+all_res$Fstat=13.26019
+head(all_res[,c("Method","outcome","exposure","nsnp","b","se","or", "or_lci95",  
+  "or_uci95","pval","intercept","intercept_se","intercept_pval",
+  "Q","Q_df","Q_pval","consortium","ncase","ncontrol","pmid","population")])
+write.csv(all_res,"combined_results_EduYears_diabetes.csv")
+
+#####################################################
+#### EduYears on 10 ADA-listed T2D risk factors
+####################################################
+
+#sibling with diabetes, UKB-b:18042 
+#mother with diabetes, UKB-b:16451 
+#father with diabetes, UKB-b:20211 
+#overweight: 795; 93
+#number of days/week doing 10 minutes of moderate 
+#physical activity (categorical ordered): UKB-b:4710
+#high blood pressure, UKB-b:14177
+#gestational diabetes, UKB-b:10452
+#polycystic ovarian syndrome, UKB-b:11450
+#HDL 
+#triglycerides
+
+#################################################
+#### EduYears (Okbay 1001) on sib with diabetes: UKB-b:18042 
+#### binary, PHESANT, self-report 
+#################################################
+setwd('C:/Users/charl/Dropbox/brian/sibling_diabetes')
+library('data.table')
+library('Cairo')
+library('devtools')
+library('MRInstruments') 
+library('TwoSampleMR')
+library('RadialMR')
+
+ao <- available_outcomes()
+exposure_dat <- extract_instruments(c('1001'))
+exposure_dat <- clump_data(exposure_dat)
+outcome_dat <- extract_outcome_data(exposure_dat$SNP, c('UKB-b:18042'), 
+  proxies = 1, rsq = 0.8, align_alleles = 1, 
+  palindromes = 1, maf_threshold = 0.3)
+dat <- harmonise_data(exposure_dat, outcome_dat, action = 2)
+mr_results <- mr(dat)
+mr_results
+
+#Outlier's check
+raddat <- format_radial(BXG=dat$beta.exposure, BYG=dat$beta.outcome, 
+  seBXG=dat$se.exposure, seBYG=dat$se.outcome, RSID=dat$SNP)
+ivwrad <- ivw_radial(raddat, alpha=0.05, weights=1)
+ivwrad2 <- ivw_radial(raddat, alpha=0.05, weights=1)
+dim(ivwrad$outliers)[1] 
+outliers=ivwrad$outliers[1]
+outliers
+myvars=outliers$SNP
+dat2 <- dat[ ! dat$SNP %in% myvars, ]
+dim(dat2) 
+dim(dat)
+mr_results <- mr(dat2)
+mr_results
+
+singlesnp_results=mr_singlesnp(dat2, parameters = default_parameters(),
+  single_method = "mr_wald_ratio", 
+  all_method = c("mr_ivw",
+  "mr_egger_regression", 
+  "mr_weighted_mode",
+  "mr_weighted_median"))
+mr_forest_plot(singlesnp_results, exponentiate = TRUE)
+mr_scatter_plot(mr_results, dat2)
+write.csv(mr_results,'res.csv')
+write.csv(singlesnp_results,'singlesnps.csv')
+
+#remove snps not used in MR
+singlesnp_results.2=singlesnp_results[1:64,]
+dim(singlesnp_results.2)
+dat2.1=dat2[which(dat2$SNP %in% singlesnp_results.2$SNP),]
+dim(dat2.1)
+dim(dat)
+dat=dat2.1
+write.csv(dat, 'SIMEX.csv')
+
+#r2 and Fstat
+n= 293723
+k=64
+p=dat$eaf.exposure
+r2.1<-(2*(dat$beta.exposure^2)*p*(1-p))/1
+r2=sum(r2.1)
+r2 
+Fstat <- r2*(n-1-k)/((1-r2)*k)
+Fstat
+
+#Combine results
+sin=singlesnp_results
+res=mr_results
+het<-mr_heterogeneity(dat)
+plt<-mr_pleiotropy_test(dat)
+all_res<-combine_all_mrresults(res,het,plt,sin,ao_slc=T,
+  Exp=T,split.exposure=T,split.outcome=T)
+all_res$lower_intercept=all_res$intercept-1.96*all_res$intercept_se
+all_res$upper_intercept=all_res$intercept+1.96*all_res$intercept_se
+all_res$r2=0.008076759
+all_res$Fstat=37.36121
+head(all_res[,c("Method","outcome","exposure","nsnp","b","se","or", "or_lci95",  
+  "or_uci95","pval","intercept","intercept_se","intercept_pval",
+  "Q","Q_df","Q_pval","consortium","ncase","ncontrol","pmid","population")])
+write.csv(all_res,"combined_results_EduYears_sib.diabetes.csv")
+
+#################################################
+#### EduYears (Okbay 1001) on mom with diabetes: UKB-b:16451 
+#################################################
+setwd('C:/Users/charl/Dropbox/brian/mom_diabetes')
+library('data.table')
+library('Cairo')
+library('devtools')
+library('MRInstruments') 
+library('TwoSampleMR')
+library('RadialMR')
+
+ao <- available_outcomes()
+exposure_dat <- extract_instruments(c('1001'))
+exposure_dat <- clump_data(exposure_dat)
+outcome_dat <- extract_outcome_data(exposure_dat$SNP, c('UKB-b:16451'), 
+  proxies = 1, rsq = 0.8, align_alleles = 1, 
+  palindromes = 1, maf_threshold = 0.3)
+dat <- harmonise_data(exposure_dat, outcome_dat, action = 2)
+mr_results <- mr(dat)
+mr_results
+
+#Outlier's check
+raddat <- format_radial(BXG=dat$beta.exposure, BYG=dat$beta.outcome, 
+  seBXG=dat$se.exposure, seBYG=dat$se.outcome, RSID=dat$SNP)
+ivwrad <- ivw_radial(raddat, alpha=0.05, weights=1)
+ivwrad2 <- ivw_radial(raddat, alpha=0.05, weights=1)
+dim(ivwrad$outliers)[1] 
+outliers=ivwrad$outliers[1]
+outliers
+myvars=outliers$SNP
+dat2 <- dat[ ! dat$SNP %in% myvars, ]
+dim(dat2) 
+dim(dat)
+mr_results <- mr(dat2)
+mr_results
+
+singlesnp_results=mr_singlesnp(dat2, parameters = default_parameters(),
+  single_method = "mr_wald_ratio", 
+  all_method = c("mr_ivw",
+  "mr_egger_regression", 
+  "mr_weighted_mode",
+  "mr_weighted_median"))
+mr_forest_plot(singlesnp_results, exponentiate = TRUE)
+mr_scatter_plot(mr_results, dat2)
+write.csv(mr_results,'res.csv')
+write.csv(singlesnp_results,'singlesnps.csv')
+
+#remove snps not used in MR
+singlesnp_results.2=singlesnp_results[1:62,]
+dim(singlesnp_results.2)
+dat2.1=dat2[which(dat2$SNP %in% singlesnp_results.2$SNP),]
+dim(dat2.1)
+dim(dat)
+dat=dat2.1
+write.csv(dat, 'SIMEX.csv')
+
+#r2 and Fstat
+n=293723
+k=62
+p=dat$eaf.exposure
+r2.1<-(2*(dat$beta.exposure^2)*p*(1-p))/1
+r2=sum(r2.1)
+r2 
+Fstat <- r2*(n-1-k)/((1-r2)*k)
+Fstat
+
+#Combine results
+sin=singlesnp_results
+res=mr_results
+het<-mr_heterogeneity(dat)
+plt<-mr_pleiotropy_test(dat)
+all_res<-combine_all_mrresults(res,het,plt,sin,ao_slc=T,
+  Exp=T,split.exposure=T,split.outcome=T)
+all_res$lower_intercept=all_res$intercept-1.96*all_res$intercept_se
+all_res$upper_intercept=all_res$intercept+1.96*all_res$intercept_se
+all_res$r2=0.00755277
+all_res$Fstat=36.04557
+head(all_res[,c("Method","outcome","exposure","nsnp","b","se","or", "or_lci95",  
+  "or_uci95","pval","intercept","intercept_se","intercept_pval",
+  "Q","Q_df","Q_pval","consortium","ncase","ncontrol","pmid","population")])
+write.csv(all_res,"combined_results_EduYears_mom.diabetes.csv")
+
+#################################################
+#### EduYears (Okbay 1001) on dad with diabetes: UKB-b:20211 
+#################################################
+setwd('C:/Users/charl/Dropbox/brian/dad_diabetes')
+library('data.table')
+library('Cairo')
+library('devtools')
+library('MRInstruments') 
+library('TwoSampleMR')
+library('RadialMR')
+
+ao <- available_outcomes()
+exposure_dat <- extract_instruments(c('1001'))
+exposure_dat <- clump_data(exposure_dat)
+outcome_dat <- extract_outcome_data(exposure_dat$SNP, c('UKB-b:20211'), 
+  proxies = 1, rsq = 0.8, align_alleles = 1, 
+  palindromes = 1, maf_threshold = 0.3)
+dat <- harmonise_data(exposure_dat, outcome_dat, action = 2)
+mr_results <- mr(dat)
+mr_results
+
+#Outlier's check
+raddat <- format_radial(BXG=dat$beta.exposure, BYG=dat$beta.outcome, 
+  seBXG=dat$se.exposure, seBYG=dat$se.outcome, RSID=dat$SNP)
+ivwrad <- ivw_radial(raddat, alpha=0.05, weights=1)
+ivwrad2 <- ivw_radial(raddat, alpha=0.05, weights=1)
+dim(ivwrad$outliers)[1] 
+outliers=ivwrad$outliers[1]
+outliers
+myvars=outliers$SNP
+dat2 <- dat[ ! dat$SNP %in% myvars, ]
+dim(dat2) 
+dim(dat)
+mr_results <- mr(dat2)
+mr_results
+
+singlesnp_results=mr_singlesnp(dat2, parameters = default_parameters(),
+  single_method = "mr_wald_ratio", 
+  all_method = c("mr_ivw",
+  "mr_egger_regression", 
+  "mr_weighted_mode",
+  "mr_weighted_median"))
+mr_forest_plot(singlesnp_results, exponentiate = TRUE)
+mr_scatter_plot(mr_results, dat2)
+write.csv(mr_results,'res.csv')
+write.csv(singlesnp_results,'singlesnps.csv')
+
+#remove snps not used in MR
+singlesnp_results.2=singlesnp_results[1:60,]
+dim(singlesnp_results.2)
+dat2.1=dat2[which(dat2$SNP %in% singlesnp_results.2$SNP),]
+dim(dat2.1)
+dim(dat)
+dat=dat2.1
+write.csv(dat, 'SIMEX.csv')
+
+#r2 and Fstat
+n=293723
+k=60
+p=dat$eaf.exposure
+r2.1<-(2*(dat$beta.exposure^2)*p*(1-p))/1
+r2=sum(r2.1)
+r2 
+Fstat <- r2*(n-1-k)/((1-r2)*k)
+Fstat
+
+#Combine results
+sin=singlesnp_results
+res=mr_results
+het<-mr_heterogeneity(dat)
+plt<-mr_pleiotropy_test(dat)
+all_res<-combine_all_mrresults(res,het,plt,sin,ao_slc=T,
+  Exp=T,split.exposure=T,split.outcome=T)
+all_res$lower_intercept=all_res$intercept-1.96*all_res$intercept_se
+all_res$upper_intercept=all_res$intercept+1.96*all_res$intercept_se
+all_res$r2=0.007515339
+all_res$Fstat=37.06135
+head(all_res[,c("Method","outcome","exposure","nsnp","b","se","or", "or_lci95",  
+  "or_uci95","pval","intercept","intercept_se","intercept_pval",
+  "Q","Q_df","Q_pval","consortium","ncase","ncontrol","pmid","population")])
+write.csv(all_res,"combined_results_EduYears_dad.diabetes.csv")
+
+#################################################
+#### EduYears (Okbay 1001) on overweight: 93
+#################################################
+setwd('C:/Users/charl/Dropbox/brian/overweight')
+library('data.table')
+library('Cairo')
+library('devtools')
+library('MRInstruments') 
+library('TwoSampleMR')
+library('RadialMR')
+
+ao <- available_outcomes()
+exposure_dat <- extract_instruments(c('1001'))
+exposure_dat <- clump_data(exposure_dat)
+outcome_dat <- extract_outcome_data(exposure_dat$SNP, c('93'), 
+  proxies = 1, rsq = 0.8, align_alleles = 1, 
+  palindromes = 1, maf_threshold = 0.3)
+dat <- harmonise_data(exposure_dat, outcome_dat, action = 2)
+mr_results <- mr(dat)
+mr_results
+
+#Outlier's check
+raddat <- format_radial(BXG=dat$beta.exposure, BYG=dat$beta.outcome, 
+  seBXG=dat$se.exposure, seBYG=dat$se.outcome, RSID=dat$SNP)
+ivwrad <- ivw_radial(raddat, alpha=0.05, weights=1)
+ivwrad2 <- ivw_radial(raddat, alpha=0.05, weights=1)
+dim(ivwrad$outliers)[1] 
+outliers=ivwrad$outliers[1]
+outliers
+myvars=outliers$SNP
+dat2 <- dat[ ! dat$SNP %in% myvars, ]
+dim(dat2) 
+dim(dat)
+mr_results <- mr(dat2)
+mr_results
+
+singlesnp_results=mr_singlesnp(dat2, parameters = default_parameters(),
+  single_method = "mr_wald_ratio", 
+  all_method = c("mr_ivw",
+  "mr_egger_regression", 
+  "mr_weighted_mode",
+  "mr_weighted_median"))
+mr_forest_plot(singlesnp_results, exponentiate = TRUE)
+mr_scatter_plot(mr_results, dat2)
+write.csv(mr_results,'res.csv')
+write.csv(singlesnp_results,'singlesnps.csv')
+
+#remove snps not used in MR
+singlesnp_results.2=singlesnp_results[1:54,]
+dim(singlesnp_results.2)
+dat2.1=dat2[which(dat2$SNP %in% singlesnp_results.2$SNP),]
+dim(dat2.1)
+dim(dat)
+dat=dat2.1
+write.csv(dat, 'SIMEX.csv')
+
+#r2 and Fstat
+n=158855
+k=54
+p=dat$eaf.exposure
+r2.1<-(2*(dat$beta.exposure^2)*p*(1-p))/1
+r2=sum(r2.1)
+r2 
+Fstat <- r2*(n-1-k)/((1-r2)*k)
+Fstat
+
+#Combine results
+sin=singlesnp_results
+res=mr_results
+het<-mr_heterogeneity(dat)
+plt<-mr_pleiotropy_test(dat)
+all_res<-combine_all_mrresults(res,het,plt,sin,ao_slc=T,
+  Exp=T,split.exposure=T,split.outcome=T)
+all_res$lower_intercept=all_res$intercept-1.96*all_res$intercept_se
+all_res$upper_intercept=all_res$intercept+1.96*all_res$intercept_se
+all_res$r2=0.006756449
+all_res$Fstat=20.00412
+head(all_res[,c("Method","outcome","exposure","nsnp","b","se","or", "or_lci95",  
+  "or_uci95","pval","intercept","intercept_se","intercept_pval",
+  "Q","Q_df","Q_pval","consortium","ncase","ncontrol","pmid","population")])
+write.csv(all_res,"combined_results_EduYears_overweight.csv")
+
+#################################################
+#### EduYears (Okbay 1001) on moderate activity: UKB-b:4710
+#################################################
+setwd('C:/Users/charl/Dropbox/brian/activity')
+library('data.table')
+library('Cairo')
+library('devtools')
+library('MRInstruments') 
+library('TwoSampleMR')
+library('RadialMR')
+
+ao <- available_outcomes()
+exposure_dat <- extract_instruments(c('1001'))
+exposure_dat <- clump_data(exposure_dat)
+outcome_dat <- extract_outcome_data(exposure_dat$SNP, c('UKB-b:4710'), 
+  proxies = 1, rsq = 0.8, align_alleles = 1, 
+  palindromes = 1, maf_threshold = 0.3)
+dat <- harmonise_data(exposure_dat, outcome_dat, action = 2)
+mr_results <- mr(dat)
+mr_results
+
+#Outlier's check
+raddat <- format_radial(BXG=dat$beta.exposure, BYG=dat$beta.outcome, 
+  seBXG=dat$se.exposure, seBYG=dat$se.outcome, RSID=dat$SNP)
+ivwrad <- ivw_radial(raddat, alpha=0.05, weights=1)
+ivwrad2 <- ivw_radial(raddat, alpha=0.05, weights=1)
+dim(ivwrad$outliers)[1] 
+outliers=ivwrad$outliers[1]
+outliers
+myvars=outliers$SNP
+dat2 <- dat[ ! dat$SNP %in% myvars, ]
+dim(dat2) 
+dim(dat)
+mr_results <- mr(dat2)
+mr_results
+
+singlesnp_results=mr_singlesnp(dat2, parameters = default_parameters(),
+  single_method = "mr_wald_ratio", 
+  all_method = c("mr_ivw",
+  "mr_egger_regression", 
+  "mr_weighted_mode",
+  "mr_weighted_median"))
+mr_forest_plot(singlesnp_results, exponentiate = TRUE)
+mr_scatter_plot(mr_results, dat2)
+write.csv(mr_results,'res.csv')
+write.csv(singlesnp_results,'singlesnps.csv')
+
+#remove snps not used in MR
+singlesnp_results.2=singlesnp_results[1:49,]
+dim(singlesnp_results.2)
+dat2.1=dat2[which(dat2$SNP %in% singlesnp_results.2$SNP),]
+dim(dat2.1)
+dim(dat)
+dat=dat2.1
+write.csv(dat, 'SIMEX.csv')
+
+#r2 and Fstat
+n=293723
+k=49
+p=dat$eaf.exposure
+r2.1<-(2*(dat$beta.exposure^2)*p*(1-p))/1
+r2=sum(r2.1)
+r2 
+Fstat <- r2*(n-1-k)/((1-r2)*k)
+Fstat
+
+#Combine results
+sin=singlesnp_results
+res=mr_results
+het<-mr_heterogeneity(dat)
+plt<-mr_pleiotropy_test(dat)
+all_res<-combine_all_mrresults(res,het,plt,sin,ao_slc=T,
+  Exp=T,split.exposure=T,split.outcome=T)
+all_res$lower_intercept=all_res$intercept-1.96*all_res$intercept_se
+all_res$upper_intercept=all_res$intercept+1.96*all_res$intercept_se
+all_res$r2=0.00606305
+all_res$Fstat=36.5595
+head(all_res[,c("Method","outcome","exposure","nsnp","b","se","or", "or_lci95",  
+  "or_uci95","pval","intercept","intercept_se","intercept_pval",
+  "Q","Q_df","Q_pval","consortium","ncase","ncontrol","pmid","population")])
+write.csv(all_res,"combined_results_EduYears_activity.csv")
+
+#################################################
+#### EduYears (Okbay 1001) on high blood pressure: UKB-b:14177
+#### PHESANT, binary
+#################################################
+setwd('C:/Users/charl/Dropbox/brian/blood_pressure')
+library('data.table')
+library('Cairo')
+library('devtools')
+library('MRInstruments') 
+library('TwoSampleMR')
+library('RadialMR')
+
+ao <- available_outcomes()
+exposure_dat <- extract_instruments(c('1001'))
+exposure_dat <- clump_data(exposure_dat)
+outcome_dat <- extract_outcome_data(exposure_dat$SNP, c('UKB-b:14177'), 
+  proxies = 1, rsq = 0.8, align_alleles = 1, 
+  palindromes = 1, maf_threshold = 0.3)
+dat <- harmonise_data(exposure_dat, outcome_dat, action = 2)
+mr_results <- mr(dat)
+mr_results
+
+#Outlier's check
+raddat <- format_radial(BXG=dat$beta.exposure, BYG=dat$beta.outcome, 
+  seBXG=dat$se.exposure, seBYG=dat$se.outcome, RSID=dat$SNP)
+ivwrad <- ivw_radial(raddat, alpha=0.05, weights=1)
+ivwrad2 <- ivw_radial(raddat, alpha=0.05, weights=1)
+dim(ivwrad$outliers)[1] 
+outliers=ivwrad$outliers[1]
+outliers
+myvars=outliers$SNP
+dat2 <- dat[ ! dat$SNP %in% myvars, ]
+dim(dat2) 
+dim(dat)
+mr_results <- mr(dat2)
+mr_results
+
+singlesnp_results=mr_singlesnp(dat2, parameters = default_parameters(),
+  single_method = "mr_wald_ratio", 
+  all_method = c("mr_ivw",
+  "mr_egger_regression", 
+  "mr_weighted_mode",
+  "mr_weighted_median"))
+mr_forest_plot(singlesnp_results, exponentiate = TRUE)
+mr_scatter_plot(mr_results, dat2)
+write.csv(mr_results,'res.csv')
+write.csv(singlesnp_results,'singlesnps.csv')
+
+#remove snps not used in MR
+singlesnp_results.2=singlesnp_results[1:45,]
+dim(singlesnp_results.2)
+dat2.1=dat2[which(dat2$SNP %in% singlesnp_results.2$SNP),]
+dim(dat2.1)
+dim(dat)
+dat=dat2.1
+write.csv(dat, 'SIMEX.csv')
+
+#r2 and Fstat
+n=293723 
+k=45
+p=dat$eaf.exposure
+r2.1<-(2*(dat$beta.exposure^2)*p*(1-p))/1
+r2=sum(r2.1)
+r2 
+Fstat <- r2*(n-1-k)/((1-r2)*k)
+Fstat
+
+#Combine results
+sin=singlesnp_results
+res=mr_results
+het<-mr_heterogeneity(dat)
+plt<-mr_pleiotropy_test(dat)
+all_res<-combine_all_mrresults(res,het,plt,sin,ao_slc=T,
+  Exp=T,split.exposure=T,split.outcome=T)
+all_res$lower_intercept=all_res$intercept-1.96*all_res$intercept_se
+all_res$upper_intercept=all_res$intercept+1.96*all_res$intercept_se
+all_res$r2=0.005507741
+all_res$Fstat=36.14344
+head(all_res[,c("Method","outcome","exposure","nsnp","b","se","or", "or_lci95",  
+  "or_uci95","pval","intercept","intercept_se","intercept_pval",
+  "Q","Q_df","Q_pval","consortium","ncase","ncontrol","pmid","population")])
+write.csv(all_res,"combined_results_EduYears_blood_pressure.csv")
+
+#################################################
+#### EduYears (Okbay 1001) on gestational diabetes: 
+#### UKB-b:10452 (PHESANT), self-report, binary, UKBB Data-Field 4041
+#################################################
+setwd('C:/Users/charl/Dropbox/brian/gest_diabetes')
+library('data.table')
+library('Cairo')
+library('devtools')
+library('MRInstruments') 
+library('TwoSampleMR')
+library('RadialMR')
+
+ao <- available_outcomes()
+exposure_dat <- extract_instruments(c('1001'))
+exposure_dat <- clump_data(exposure_dat)
+outcome_dat <- extract_outcome_data(exposure_dat$SNP, c('UKB-b:10452'), 
+  proxies = 1, rsq = 0.8, align_alleles = 1, 
+  palindromes = 1, maf_threshold = 0.3)
+dat <- harmonise_data(exposure_dat, outcome_dat, action = 2)
+mr_results <- mr(dat)
+mr_results
+
+#Outlier's check
+raddat <- format_radial(BXG=dat$beta.exposure, BYG=dat$beta.outcome, 
+  seBXG=dat$se.exposure, seBYG=dat$se.outcome, RSID=dat$SNP)
+ivwrad <- ivw_radial(raddat, alpha=0.05, weights=1)
+ivwrad2 <- ivw_radial(raddat, alpha=0.05, weights=1)
+dim(ivwrad$outliers)[1] 
+outliers=ivwrad$outliers[1]
+outliers
+myvars=outliers$SNP
+dat2 <- dat[ ! dat$SNP %in% myvars, ]
+dim(dat2) 
+dim(dat)
+mr_results <- mr(dat2)
+mr_results
+
+singlesnp_results=mr_singlesnp(dat2, parameters = default_parameters(),
+  single_method = "mr_wald_ratio", 
+  all_method = c("mr_ivw",
+  "mr_egger_regression", 
+  "mr_weighted_mode",
+  "mr_weighted_median"))
+mr_forest_plot(singlesnp_results, exponentiate = TRUE)
+mr_scatter_plot(mr_results, dat2)
+write.csv(mr_results,'res.csv')
+write.csv(singlesnp_results,'singlesnps.csv')
+
+#remove snps not used in MR
+singlesnp_results.2=singlesnp_results[1:69,]
+dim(singlesnp_results.2)
+dat2.1=dat2[which(dat2$SNP %in% singlesnp_results.2$SNP),]
+dim(dat2.1)
+dim(dat)
+dat=dat2.1
+write.csv(dat, 'SIMEX.csv')
+
+#r2 and Fstat
+n= 293723
+k=69
+p=dat$eaf.exposure
+r2.1<-(2*(dat$beta.exposure^2)*p*(1-p))/1
+r2=sum(r2.1)
+r2 
+Fstat <- r2*(n-1-k)/((1-r2)*k)
+Fstat
+
+#Combine results
+sin=singlesnp_results
+res=mr_results
+het<-mr_heterogeneity(dat)
+plt<-mr_pleiotropy_test(dat)
+all_res<-combine_all_mrresults(res,het,plt,sin,ao_slc=T,
+  Exp=T,split.exposure=T,split.outcome=T)
+all_res$lower_intercept=all_res$intercept-1.96*all_res$intercept_se
+all_res$upper_intercept=all_res$intercept+1.96*all_res$intercept_se
+all_res$r2=0.00876203
+all_res$Fstat=37.61943
+head(all_res[,c("Method","outcome","exposure","nsnp","b","se","or", "or_lci95",  
+  "or_uci95","pval","intercept","intercept_se","intercept_pval",
+  "Q","Q_df","Q_pval","consortium","ncase","ncontrol","pmid","population")])
+write.csv(all_res,"combined_results_EduYears_gest.diabetes.csv")
+
+#################################################
+#### EduYears (Okbay 1001) on polycystic ovarian syndrome: UKB-b:11450 
+#################################################
+setwd('C:/Users/charl/Dropbox/brian/polycystic')
+library('data.table')
+library('Cairo')
+library('devtools')
+library('MRInstruments') 
+library('TwoSampleMR')
+library('RadialMR')
+
+ao <- available_outcomes()
+exposure_dat <- extract_instruments(c('1001'))
+exposure_dat <- clump_data(exposure_dat)
+outcome_dat <- extract_outcome_data(exposure_dat$SNP, c('UKB-b:11450'), 
+  proxies = 1, rsq = 0.8, align_alleles = 1, 
+  palindromes = 1, maf_threshold = 0.3)
+dat <- harmonise_data(exposure_dat, outcome_dat, action = 2)
+mr_results <- mr(dat)
+mr_results
+
+#Outlier's check
+raddat <- format_radial(BXG=dat$beta.exposure, BYG=dat$beta.outcome, 
+  seBXG=dat$se.exposure, seBYG=dat$se.outcome, RSID=dat$SNP)
+ivwrad <- ivw_radial(raddat, alpha=0.05, weights=1)
+ivwrad2 <- ivw_radial(raddat, alpha=0.05, weights=1)
+dim(ivwrad$outliers)[1] 
+outliers=ivwrad$outliers[1]
+outliers
+myvars=outliers$SNP
+dat2 <- dat[ ! dat$SNP %in% myvars, ]
+dim(dat2) 
+dim(dat)
+mr_results <- mr(dat2)
+mr_results
+
+singlesnp_results=mr_singlesnp(dat2, parameters = default_parameters(),
+  single_method = "mr_wald_ratio", 
+  all_method = c("mr_ivw",
+  "mr_egger_regression", 
+  "mr_weighted_mode",
+  "mr_weighted_median"))
+mr_forest_plot(singlesnp_results, exponentiate = TRUE)
+mr_scatter_plot(mr_results, dat2)
+write.csv(mr_results,'res.csv')
+write.csv(singlesnp_results,'singlesnps.csv')
+
+#remove snps not used in MR
+singlesnp_results.2=singlesnp_results[1:68,]
+dim(singlesnp_results.2)
+dat2.1=dat2[which(dat2$SNP %in% singlesnp_results.2$SNP),]
+dim(dat2.1)
+dim(dat)
+dat=dat2.1
+write.csv(dat, 'SIMEX.csv')
+
+#r2 and Fstat
+n=293723
+  k=68
+  p=dat$eaf.exposure
+r2.1<-(2*(dat$beta.exposure^2)*p*(1-p))/1
+r2=sum(r2.1)
+r2 
+Fstat <- r2*(n-1-k)/((1-r2)*k)
+Fstat
+
+#Combine results
+sin=singlesnp_results
+res=mr_results
+het<-mr_heterogeneity(dat)
+plt<-mr_pleiotropy_test(dat)
+all_res<-combine_all_mrresults(res,het,plt,sin,ao_slc=T,
+  Exp=T,split.exposure=T,split.outcome=T)
+all_res$lower_intercept=all_res$intercept-1.96*all_res$intercept_se
+all_res$upper_intercept=all_res$intercept+1.96*all_res$intercept_se
+all_res$r2=0.008680379
+  all_res$Fstat=37.81395
+  head(all_res[,c("Method","outcome","exposure","nsnp","b","se","or", "or_lci95",  
+  "or_uci95","pval","intercept","intercept_se","intercept_pval",
+  "Q","Q_df","Q_pval","consortium","ncase","ncontrol","pmid","population")])
+write.csv(all_res,"combined_results_EduYears_polycystic.csv")
+
+#################################################
+#### EduYears (Okbay 1001) on HDL: 299 
+#### n=187167; Willer et al.
+#################################################
+setwd('C:/Users/charl/Dropbox/brian/hdl')
+library('data.table')
+library('Cairo')
+library('devtools')
+library('MRInstruments') 
+library('TwoSampleMR')
+library('RadialMR')
+
+ao <- available_outcomes()
+exposure_dat <- extract_instruments(c('1001'))
+exposure_dat <- clump_data(exposure_dat)
+outcome_dat <- extract_outcome_data(exposure_dat$SNP, c('299'), 
+  proxies = 1, rsq = 0.8, align_alleles = 1, 
+  palindromes = 1, maf_threshold = 0.3)
+dat <- harmonise_data(exposure_dat, outcome_dat, action = 2)
+mr_results <- mr(dat)
+mr_results
+
+#Outlier's check
+raddat <- format_radial(BXG=dat$beta.exposure, BYG=dat$beta.outcome, 
+  seBXG=dat$se.exposure, seBYG=dat$se.outcome, RSID=dat$SNP)
+ivwrad <- ivw_radial(raddat, alpha=0.05, weights=1)
+ivwrad2 <- ivw_radial(raddat, alpha=0.05, weights=1)
+dim(ivwrad$outliers)[1] 
+outliers=ivwrad$outliers[1]
+outliers
+myvars=outliers$SNP
+dat2 <- dat[ ! dat$SNP %in% myvars, ]
+dim(dat2) 
+dim(dat)
+mr_results <- mr(dat2)
+mr_results
+
+singlesnp_results=mr_singlesnp(dat2, parameters = default_parameters(),
+  single_method = "mr_wald_ratio", 
+  all_method = c("mr_ivw",
+  "mr_egger_regression", 
+  "mr_weighted_mode",
+  "mr_weighted_median"))
+mr_forest_plot(singlesnp_results, exponentiate = FALSE)
+mr_scatter_plot(mr_results, dat2)
+write.csv(mr_results,'res.csv')
+write.csv(singlesnp_results,'singlesnps.csv')
+
+#remove snps not used in MR
+singlesnp_results.2=singlesnp_results[1:52,]
+dim(singlesnp_results.2)
+dat2.1=dat2[which(dat2$SNP %in% singlesnp_results.2$SNP),]
+dim(dat2.1)
+dim(dat)
+dat=dat2.1
+write.csv(dat, 'SIMEX.csv')
+
+#r2 and Fstat
+n=94311
+  k=52
+  p=dat$eaf.exposure
+r2.1<-(2*(dat$beta.exposure^2)*p*(1-p))/1
+r2=sum(r2.1)
+r2 
+Fstat <- r2*(n-1-k)/((1-r2)*k)
+Fstat
+
+#Combine results
+sin=singlesnp_results
+res=mr_results
+het<-mr_heterogeneity(dat)
+plt<-mr_pleiotropy_test(dat)
+all_res<-combine_all_mrresults(res,het,plt,sin,ao_slc=T,
+  Exp=T,split.exposure=T,split.outcome=T)
+all_res$lower_intercept=all_res$intercept-1.96*all_res$intercept_se
+all_res$upper_intercept=all_res$intercept+1.96*all_res$intercept_se
+all_res$r2=0.006516896
+  all_res$Fstat=11.89036
+  head(all_res[,c("Method","outcome","exposure","nsnp","b","se","or", "or_lci95",  
+  "or_uci95","pval","intercept","intercept_se","intercept_pval",
+  "Q","Q_df","Q_pval","consortium","ncase","ncontrol","pmid","population")])
+write.csv(all_res,"combined_results_EduYears_HDL.csv")
+
+#################################################
+#### EduYears (Okbay 1001) on triglycerides: 302
+#### Willer at al; n=177861; unit=mg/dL
+#################################################
+setwd('C:/Users/charl/Dropbox/brian/triglycerides')
+library('data.table')
+library('Cairo')
+library('devtools')
+library('MRInstruments') 
+library('TwoSampleMR')
+library('RadialMR')
+
+ao <- available_outcomes()
+exposure_dat <- extract_instruments(c('1001'))
+exposure_dat <- clump_data(exposure_dat)
+outcome_dat <- extract_outcome_data(exposure_dat$SNP, c('302'), 
+  proxies = 1, rsq = 0.8, align_alleles = 1, 
+  palindromes = 1, maf_threshold = 0.3)
+dat <- harmonise_data(exposure_dat, outcome_dat, action = 2)
+mr_results <- mr(dat)
+mr_results
+
+#Outlier's check
+raddat <- format_radial(BXG=dat$beta.exposure, BYG=dat$beta.outcome, 
+  seBXG=dat$se.exposure, seBYG=dat$se.outcome, RSID=dat$SNP)
+ivwrad <- ivw_radial(raddat, alpha=0.05, weights=1)
+ivwrad2 <- ivw_radial(raddat, alpha=0.05, weights=1)
+dim(ivwrad$outliers)[1] 
+outliers=ivwrad$outliers[1]
+outliers
+myvars=outliers$SNP
+dat2 <- dat[ ! dat$SNP %in% myvars, ]
+dim(dat2) 
+dim(dat)
+mr_results <- mr(dat2)
+mr_results
+
+singlesnp_results=mr_singlesnp(dat2, parameters = default_parameters(),
+  single_method = "mr_wald_ratio", 
+  all_method = c("mr_ivw",
+  "mr_egger_regression", 
+  "mr_weighted_mode",
+  "mr_weighted_median"))
+mr_forest_plot(singlesnp_results, exponentiate = FALSE)
+mr_scatter_plot(mr_results, dat2)
+write.csv(mr_results,'res.csv')
+write.csv(singlesnp_results,'singlesnps.csv')
+
+#remove snps not used in MR
+singlesnp_results.2=singlesnp_results[1:52,]
+dim(singlesnp_results.2)
+dat2.1=dat2[which(dat2$SNP %in% singlesnp_results.2$SNP),]
+dim(dat2.1)
+dim(dat)
+dat=dat2.1
+write.csv(dat, 'SIMEX.csv')
+
+#r2 and Fstat
+n=177861
+  k=52
+  p=dat$eaf.exposure
+r2.1<-(2*(dat$beta.exposure^2)*p*(1-p))/1
+r2=sum(r2.1)
+r2 
+Fstat <- r2*(n-1-k)/((1-r2)*k)
+Fstat
+
+#Combine results
+sin=singlesnp_results
+res=mr_results
+het<-mr_heterogeneity(dat)
+plt<-mr_pleiotropy_test(dat)
+all_res<-combine_all_mrresults(res,het,plt,sin,ao_slc=T,
+  Exp=T,split.exposure=T,split.outcome=T)
+all_res$lower_intercept=all_res$intercept-1.96*all_res$intercept_se
+all_res$upper_intercept=all_res$intercept+1.96*all_res$intercept_se
+all_res$r2=0.006538881
+  all_res$Fstat=22.50612
+  head(all_res[,c("Method","outcome","exposure","nsnp","b","se","or", "or_lci95",  
+  "or_uci95","pval","intercept","intercept_se","intercept_pval",
+  "Q","Q_df","Q_pval","consortium","ncase","ncontrol","pmid","population")])
+write.csv(all_res,"combined_results_EduYears_triglycerides.csv")
+
+##############################################################
+#### Power
+##############################################################
+setwd('C:/Users/charl/Dropbox/brian')
+library(car)
+library(ggplot2)
+
+#### Scatter
+p=read.csv('power.csv')
+head(p)
+
+scatterplot(Power ~ Effect.estimate | T2D, data=p,
+  xlab="Effect estimate", ylab="Power", regLine=FALSE, 
+  pch = c(20,17), cex=1, col=c("blue", "red"),
+  main="Power")
+
+scatterplot(Power ~ Effect.estimate | T2D, data=p,pch = c(20),col=c("black"),
+  xlab="Effect estimate", ylab="Power", regLine=FALSE, main="Power")
